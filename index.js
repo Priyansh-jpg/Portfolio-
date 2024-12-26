@@ -1,96 +1,80 @@
-const mongoose = require('mongoose');
+var express = require("express");
+var fs = require("fs");
+var app = express();
+var bodyparser = require("body-parser");
 
-// Connection URL
-const MONGO_URI = 'mongodb://localhost:27017/Week8';
+app.use(bodyparser.urlencoded({ extended: true }));
 
-// Connecting to MongoDB
-mongoose
-  .connect(MONGO_URI, { useUnifiedTopology: true, useNewUrlParser: true })
-  .then(() => console.log(`Connected to ${MONGO_URI}`))
-  .catch((err) => console.error(`Error occurred during connection: ${err}`));
-
-// Define the schema
-const PersonSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
-  },
-  age: {
-    type: Number,
-    required: true,
-    min: 0, // Optional validation to ensure age is non-negative
-  },
-  Gender: {
-    type: String,
-    enum: ['Male', 'Female', 'Other'], // Optional: Limit gender values
-  },
-  Salary: {
-    type: Number,
-    min: 0, // Optional validation for non-negative salaries
-  },
+app.get('/', function (_req, res) {
+    res.send("hello it is my first express application");
 });
 
-// Create a model named `Person` with the `personCollection`
-const Person = mongoose.model('Person', PersonSchema, 'personCollection');
+app.listen(5000, function () {
+    console.log("server is running on port 5000");
+});
 
-// Create multiple documents and insert them
-const manypersons = [
-  { name: 'Simon', age: 42, Gender: "Male", Salary: 3456 },
-  { name: 'Neesha', age: 23, Gender: "Female", Salary: 1000 },
-  { name: 'Mary', age: 27, Gender: "Female", Salary: 5402 },
-  { name: 'Mike', age: 40, Gender: "Male", Salary: 4519 }
-];
+app.get('/about', function (_req, res) {
+    res.send("this is a basic express application");
+});
 
-Person.insertMany(manypersons)
-  .then(function() {
-    console.log("Data inserted successfully!");
-  })
-  .catch(function(error) {
-    console.log("Error during insertion: ", error);
-  });
+app.get('/user/:userid/books/:bookid', function (req, res) {
+    res.send(req.params);
+});
 
-// Fetch all documents, limiting to 5 records
-Person.find({})
-  .limit(5)
-  .then((docs) => {
-    console.log("All records (limit 5):", docs);
-  })
-  .catch((error) => {
-    console.log("Error fetching documents: ", error);
-  });
+app.get('/getStudents', function (req, res) {
+    fs.readFile(__dirname + "/student.json", 'utf8', function (err, data) {
+        if (err) {
+            return res.status(500).json({ status: false, message: "Error reading file" });
+        }
+        res.json({
+            status: true,
+            status_code: 200,
+            'requested at': req.localtime,
+            requrl: req.url,
+            'request method': req.method,
+            studentdata: JSON.parse(data)
+        });
+    });
+});
 
-// Fetch documents with filtering criteria: Gender = Female and age > 25
-Person.find({ Gender: "Female", age: { $gt: 25 } })
-  .then((docs) => {
-    console.log("Filtered records (Female and age > 25):", docs);
-  })
-  .catch((error) => {
-    console.log("Error fetching filtered documents: ", error);
-  });
+app.get('/GETstudentid/:id', (req, res) => {
+    fs.readFile(__dirname + "/student.json", 'utf8', function (err, data) {
+        if (err) {
+            return res.status(500).json({ status: false, message: "Error reading file" });
+        }
+        var students = JSON.parse(data);
+        var student = students["student" + req.params.id];
+        if (student) {
+            res.json(student);
+        } else {
+            res.json({
+                status: true,
+                status_code: 200,
+                'requested at': req.localtime,
+                requrl: req.url,
+                'request method': req.method,
+                studentdata: students
+            });
+        }
+    });
+});
 
-// Return the total number of documents in the collection
-Person.countDocuments()
-  .then((count) => {
-    console.log("Total number of documents:", count);
-  })
-  .catch((error) => {
-    console.log("Error counting documents: ", error);
-  });
+app.get('/studentinfo', function (req, res) {
+    res.sendFile('studentInfo.html', { root: __dirname });
+});
 
-// Delete documents with specific criteria: Age < 30
-Person.deleteMany({ age: { $lt: 30 } })
-  .then((result) => {
-    console.log("Documents deleted:", result);
-  })
-  .catch((error) => {
-    console.log("Error deleting documents: ", error);
-  });
+app.post('/submit-data', function (req, res) {
+    var name = req.body.firstName + ' ' + req.body.lastName;
+    var Age = req.body.myAge + ' Gender: ' + req.body.gender;
+    var Qual = ' Qualification: ' + req.body.Qual;
+    res.send({
+        status: true,
+        message: 'form Details',
+        data: {
+            name: name,
+            age: Age,
+            Qualification: Qual
+        }
+    });
+});
 
-// Update documents with criteria: Gender = Female, and set Salary to 5555
-Person.updateMany({ Gender: "Female" }, { $set: { Salary: 5555 } })
-  .then((result) => {
-    console.log("Documents updated:", result);
-  })
-  .catch((error) => {
-    console.log("Error updating documents: ", error);
-  });
